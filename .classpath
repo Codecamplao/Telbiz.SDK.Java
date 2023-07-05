@@ -7,7 +7,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
-	<classpathentry kind="lib" path="D:/Library/java/jsoup-1.15.1.jar"/>
-	<classpathentry kind="lib" path="D:/Library/java/json-20220320.jar"/>
+	<classpathentry kind="lib" path="C:/Java/Library/jsoup-1.15.1.jar"/>
+	<classpathentry kind="lib" path="C:/Java/Library/json-20220320.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -16,7 +16,9 @@ import org.jsoup.Jsoup;
 import com.telbiz.model.TokenEndPointRequest;
 import com.telbiz.model.UrlDefault;
 import com.telbiz.model.CommonResponse;
-import com.telbiz.model.SMSHeader;
+import com.telbiz.model.ResultResponse;
+import com.telbiz.model.PKResponse;
+
 
 public class Telbiz implements ITelbiz {
 	private String clientid;
@@ -26,28 +28,14 @@ public class Telbiz implements ITelbiz {
 		this.clientid = clientid;
 		this.secret = secret;
 	}
-
 	@Override
-	public CommonResponse SendSMS(SMSHeader header, String phone, String message) {
+	public ResultResponse SendSMS(String header, String phone, String message) {
 		CommonResponse resp = new CommonResponse();
+		PKResponse pkresp = new PKResponse();
+		ResultResponse result = new ResultResponse();
 		try {
-			String src = "Telbiz";
-			switch (header) {
-			case News:
-				src = "News";
-				break;
-			case Promotion:
-				src = "Promotion";
-				break;
-			case OTP:
-				src = "OTP";
-				break;
-			case Info:
-				src = "Info";
-				break;
-			default:
-				break;
-			}
+			String src = header;
+			
 			// Get Token with client ID and Secret
 			TokenInterface IToken = new TokenInterface();
 			var reqToken = new TokenEndPointRequest();
@@ -65,7 +53,8 @@ public class Telbiz implements ITelbiz {
 				resp.Success = false;
 				resp.Message = "INVALID_CLIENT";
 				resp.Detail = access_token.Detail;
-				return resp;
+				result.Response = resp;
+				return result;
 			}
 
 			String jsonData = "";
@@ -93,7 +82,21 @@ public class Telbiz implements ITelbiz {
 							resp.setMessage(resultRes.getString("message"));
 							resp.setDetail(resultRes.getString("detail"));
 						}
-					}else if(execute.statusCode() == 500) {
+						var resultKey = Jobject.getJSONObject("pkresponse");
+						if(resultKey != null) {
+							pkresp.setPartitionKey(resultKey.getString("partitionkey"));
+							pkresp.setRangeKey(resultKey.getString("rangekey"));
+						}
+					}else if(execute.statusCode() == 400) {
+						var resultRes = Jobject.getJSONObject("response");
+						if (resultRes != null) {
+							resp.setCode(resultRes.getString("code"));
+							resp.setSuccess(resultRes.getBoolean("success"));
+							resp.setMessage(resultRes.getString("message"));
+							resp.setDetail(resultRes.getString("detail"));
+						}
+					}
+					else if(execute.statusCode() == 500) {
 						resp.setCode("500");
 						resp.setSuccess(false);
 						resp.setMessage(Jobject.getString("type"));
@@ -106,17 +109,19 @@ public class Telbiz implements ITelbiz {
 					}
 				}
 			}
-
-			return resp;
+			result.Response = resp;
+			return result;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return resp;
+		return result;
 	}
 
 	@Override
-	public CommonResponse Topup(String phone, int amount) {
+	public ResultResponse Topup(String phone, int amount) {
 		CommonResponse resp = new CommonResponse();
+		PKResponse pkresp = new PKResponse();
+		ResultResponse result = new ResultResponse();
 		try {
 			// Get Token with client ID and Secret
 			TokenInterface IToken = new TokenInterface();
@@ -135,7 +140,8 @@ public class Telbiz implements ITelbiz {
 				resp.Success = false;
 				resp.Message = "INVALID_CLIENT";
 				resp.Detail = access_token.Detail;
-				return resp;
+				result.Response = resp;
+				return result;
 			}
 
 			String jsonData = "";
@@ -153,34 +159,46 @@ public class Telbiz implements ITelbiz {
 
 			if (jsonData != "") {
 				JSONObject Jobject = new JSONObject(jsonData);
-				if (Jobject != null) {
-					if(execute.statusCode() == 200) {
-						var resultRes = Jobject.getJSONObject("response");
-						if (resultRes != null) {
-							resp.setCode(resultRes.getString("code"));
-							resp.setSuccess(resultRes.getBoolean("success"));
-							resp.setMessage(resultRes.getString("message"));
-							resp.setDetail(resultRes.getString("detail"));
-						}
-					}else if(execute.statusCode() == 500) {
-						resp.setCode("500");
-						resp.setSuccess(false);
-						resp.setMessage(Jobject.getString("type"));
-						resp.setDetail(Jobject.getString("type") + " " + Jobject.getString("title")+ " " + Jobject.getString("status")+ " " + Jobject.getString("traceId"));
-					}else {
-						resp.setCode(String.valueOf(execute.statusCode()));
-						resp.setSuccess(false);
-						resp.setMessage("");
-						resp.setDetail("");
+				if(execute.statusCode() == 200) {
+					var resultRes = Jobject.getJSONObject("response");
+					if (resultRes != null) {
+						resp.setCode(resultRes.getString("code"));
+						resp.setSuccess(resultRes.getBoolean("success"));
+						resp.setMessage(resultRes.getString("message"));
+						resp.setDetail(resultRes.getString("detail"));
 					}
+					var resultKey = Jobject.getJSONObject("pkresponse");
+					if(resultKey != null) {
+						pkresp.setPartitionKey(resultKey.getString("partitionkey"));
+						pkresp.setRangeKey(resultKey.getString("rangekey"));
+					}
+				}else if(execute.statusCode() == 400) {
+					var resultRes = Jobject.getJSONObject("response");
+					if (resultRes != null) {
+						resp.setCode(resultRes.getString("code"));
+						resp.setSuccess(resultRes.getBoolean("success"));
+						resp.setMessage(resultRes.getString("message"));
+						resp.setDetail(resultRes.getString("detail"));
+					}
+				}
+				else if(execute.statusCode() == 500) {
+					resp.setCode("500");
+					resp.setSuccess(false);
+					resp.setMessage(Jobject.getString("type"));
+					resp.setDetail(Jobject.getString("type") + " " + Jobject.getString("title")+ " " + Jobject.getString("status")+ " " + Jobject.getString("traceId"));
+				}else {
+					resp.setCode(String.valueOf(execute.statusCode()));
+					resp.setSuccess(false);
+					resp.setMessage("");
+					resp.setDetail("");
 				}
 			}
 
-			return resp;
+			return result;
 		} catch (Exception e) {
 
 		}
-		return resp;
+		return result;
 	}
 
 	// Ignore SSL when call API
